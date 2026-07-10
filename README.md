@@ -92,7 +92,24 @@ kray-ops/
     └── tenant-user-guide.md     # Self-service guide for data scientists
 ```
 
-## RBAC Model
+## Tenant Onboarding & Access Model
+
+| Resource / Action | Tenant Access | Granted Via | Owner | Why |
+|-------------------|--------------|-------------|-------|-----|
+| rayclusters / rayjobs / rayservices (ray.io) | Yes -- own ns only | Namespaced Role + RoleBinding | Tenant self-serve | Their workloads |
+| pods, pods/log, services, endpoints, configmaps | Yes -- own ns only | Same Role | Tenant self-serve | Ray runtime creates/needs these |
+| Workbench / notebooks | Yes -- own ns only | RHOAI Dashboard project role | Tenant self-serve | Interactive dev + CodeFlare SDK |
+| resourcequotas, limitranges | No | -- | GPUaaS / OPS | Wouldn't let tenants lift their own GPU/CPU caps |
+| clusterroles, roles, rolebindings | No | -- | GPUaaS / OPS | Privilege escalation risk |
+| SecurityContextConstraints (SCC) | No (bound for them by us) | Cluster-scoped binding | OPS / GPUaaS | Cluster-scoped; Ray pods need it but tenants can't self-grant |
+| CRDs, operator config (DSC/DSCI), KubeRay operator | No | -- | OPS / GPUaaS | Platform layer -- single owner |
+
+### What We Own vs. What Tenants Get
+
+- **We provision per tenant:** a dedicated namespace, ResourceQuota + LimitRange (GPU/CPU caps), the namespaced Role + RoleBinding, SCC binding for the Ray service accounts, and image-pull access.
+- **Tenants self-serve within their namespace:** create/manage their own RayClusters, RayJobs, RayServices, and workbenches -- but cannot alter quotas, RBAC, SCC, or reach other tenants' namespaces.
+
+### RBAC Role Detail
 
 Each tenant gets a `ray-tenant-user` Role with:
 
