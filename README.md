@@ -99,7 +99,7 @@ Each tenant gets a `ray-tenant-user` Role with:
 | API Group | Resources | Verbs |
 |-----------|-----------|-------|
 | `ray.io` | rayclusters, rayjobs, rayservices | Full CRUD |
-| `""` (core) | pods, pods/log, services, configmaps, events | Full CRUD |
+| `""` (core) | pods, pods/log, services, endpoints, configmaps, events | Full CRUD |
 | `""` (core) | secrets | Read-only |
 | `kubeflow.org` | notebooks | Full CRUD |
 | `kueue.x-k8s.io` | workloads, localqueues | Read-only |

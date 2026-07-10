@@ -51,7 +51,7 @@ oc apply -k "$REPO_ROOT/$OVERLAY_DIR"
 echo ""
 
 # Extract namespace from overlay
-TENANT_NS=$(oc kustomize "$REPO_ROOT/$OVERLAY_DIR" | grep 'kind: Namespace' -A2 | grep 'name:' | head -1 | awk '{print $2}')
+TENANT_NS=$(oc kustomize "$REPO_ROOT/$OVERLAY_DIR" | awk '/^kind: Namespace$/{found=1} found && /^  name:/{print $2; exit}')
 echo "--- Tenant namespace: $TENANT_NS ---"
 
 # Verify

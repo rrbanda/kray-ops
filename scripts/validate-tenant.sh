@@ -84,6 +84,15 @@ check "LimitRange exists" "yes" \
 check "ServiceAccount exists" "yes" \
   "$(resource_exists sa ray-service-account -n "$TENANT_NS")"
 
+check "SCC RoleBinding exists" "yes" \
+  "$(resource_exists rolebinding ray-scc-binding -n "$TENANT_NS")"
+
+check "Group RoleBinding exists" "yes" \
+  "$(resource_exists rolebinding ray-tenant-binding -n "$TENANT_NS")"
+
+check "SA RoleBinding exists" "yes" \
+  "$(resource_exists rolebinding ray-sa-binding -n "$TENANT_NS")"
+
 echo ""
 echo "=========================================="
 echo "  Results: $PASS passed, $FAIL failed"

@@ -125,7 +125,7 @@ graph TD
 
 ```mermaid
 graph TD
-    subgraph role["Role: ray-tenant-user"]
+    subgraph roleDefinition["Role: ray-tenant-user"]
         R1["ray.io → rayclusters, rayjobs, rayservices<br/><b>CRUD</b>"]
         R2["core → pods, pods/log, services,<br/>endpoints, configmaps, events<br/><b>CRUD</b>"]
         R3["core → secrets<br/><b>read-only</b>"]
@@ -137,14 +137,14 @@ graph TD
     subgraph bindings["Per-Tenant RoleBindings"]
         B1["ray-tenant-binding<br/><i>Group → tenant group</i>"]
         B2["ray-sa-binding<br/><i>SA: ray-service-account</i><br/><i>SA: default</i>"]
-        B3["ray-scc-binding<br/><i>ClusterRole: system:openshift:scc:nonroot-v2</i><br/><i>SA: default</i>"]
+        B3["ray-scc-binding<br/><i>ClusterRole: system:openshift:scc:nonroot-v2</i><br/><i>SA: default + ray-service-account</i>"]
     end
 
-    B1 -->|roleRef| role
-    B2 -->|roleRef| role
+    B1 -->|roleRef| roleDefinition
+    B2 -->|roleRef| roleDefinition
     B3 -.->|SCC grant, not Role ref| SCC["nonroot-v2 SCC"]
 
-    style role fill:#e6f2ff,stroke:#0066cc
+    style roleDefinition fill:#e6f2ff,stroke:#0066cc
     style bindings fill:#f0f0f0,stroke:#666
 ```
 
@@ -242,7 +242,7 @@ graph TD
         A_ROLE["Role: ray-tenant-user"]
         A_RB["RoleBinding: ray-tenant-binding<br/>→ Group: ds-team-alpha-users"]
         A_SA["ServiceAccount: ray-service-account<br/>+ RoleBinding: ray-sa-binding"]
-        A_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: default"]
+        A_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: default + ray-service-account"]
     end
 
     subgraph beta["ds-team-beta"]
@@ -253,7 +253,7 @@ graph TD
         B_ROLE["Role: ray-tenant-user"]
         B_RB["RoleBinding: ray-tenant-binding<br/>→ Group: ds-team-beta-users"]
         B_SA["ServiceAccount: ray-service-account<br/>+ RoleBinding: ray-sa-binding"]
-        B_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: default"]
+        B_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: default + ray-service-account"]
     end
 
     alpha -.->|"DENIED: Alpha SA cannot<br/>create in Beta namespace"| beta
@@ -314,12 +314,15 @@ graph LR
 
 ## CodeFlare Operator Config
 
-The `codeflare-operator-config` ConfigMap in `redhat-ods-applications` controls Ray security behavior. Key settings:
+The `codeflare-operator-config` ConfigMap in `redhat-ods-applications` controls Ray security behavior. Key settings from the live cluster:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| AppWrapper autopilot | enabled | Anti-affinity injection, GPU health taints |
-| Fault tolerance grace period | 60s | Admission grace period for workloads |
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `kuberay.mTLSEnabled` | `true` | Mutual TLS between Ray head and worker nodes |
+| `kuberay.rayDashboardOAuthEnabled` | `true` | OAuth proxy sidecar on Ray dashboard |
+| `appwrapper.enabled` | `false` | AppWrapper CR support (disabled by default) |
+
+> **Note:** RHOAI also auto-creates `default-flavor` and `nvidia-gpu-flavor` ResourceFlavors. These are not used by our `gpu-pool` ClusterQueue and can be ignored.
 
 ## Verified Deployment State
 

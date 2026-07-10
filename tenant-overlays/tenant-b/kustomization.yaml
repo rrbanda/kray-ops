@@ -32,6 +32,12 @@ patches:
       - op: replace
         path: /spec/hard/requests.nvidia.com~1gpu
         value: "2"
+      - op: replace
+        path: /spec/hard/limits.cpu
+        value: "16"
+      - op: replace
+        path: /spec/hard/limits.memory
+        value: 64Gi
 
   - target:
       kind: LimitRange
@@ -77,6 +83,9 @@ patches:
         value: ds-team-beta
       - op: replace
         path: /subjects/0/namespace
+        value: ds-team-beta
+      - op: replace
+        path: /subjects/1/namespace
         value: ds-team-beta
 
   - target:

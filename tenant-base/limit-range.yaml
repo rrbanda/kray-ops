@@ -15,4 +15,3 @@ spec:
       max:
         cpu: "8"
         memory: 32Gi
-        nvidia.com/gpu: "1"
