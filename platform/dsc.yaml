@@ -1,0 +1,30 @@
+apiVersion: datasciencecluster.opendatahub.io/v1
+kind: DataScienceCluster
+metadata:
+  name: default-dsc
+spec:
+  components:
+    codeflare:
+      managementState: Managed
+    ray:
+      managementState: Managed
+    kueue:
+      managementState: Unmanaged
+      defaultClusterQueueName: gpu-pool
+      defaultLocalQueueName: default
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    kserve:
+      managementState: Removed
+    modelmeshserving:
+      managementState: Removed
+    datasciencepipelines:
+      managementState: Removed
+    trainingoperator:
+      managementState: Removed
+    trustyai:
+      managementState: Removed
+    modelregistry:
+      managementState: Removed

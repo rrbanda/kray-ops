@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ray-sa-binding
+  namespace: TENANT_NAMESPACE
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ray-tenant-user
+subjects:
+  - kind: ServiceAccount
+    name: ray-service-account
+    namespace: TENANT_NAMESPACE
+  - kind: ServiceAccount
+    name: default
+    namespace: TENANT_NAMESPACE

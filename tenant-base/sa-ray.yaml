@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ray-service-account
+  namespace: TENANT_NAMESPACE
+  labels:
+    app: ray

@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ray-tenant-user
+  namespace: TENANT_NAMESPACE
+rules:
+  # Ray workloads -- full CRUD in own namespace
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters", "rayjobs", "rayservices"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Pod lifecycle (Ray runtime creates these)
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "endpoints", "configmaps", "events"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Secrets read-only (mTLS certs from CodeFlare)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  # Workbench / notebook access
+  - apiGroups: ["kubeflow.org"]
+    resources: ["notebooks"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Kueue read-only (debugging workload admission)
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["workloads", "localqueues"]
+    verbs: ["get", "list", "watch"]
+  # PVC for workbench storage
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

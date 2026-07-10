@@ -1,0 +1,102 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../tenant-base
+
+patches:
+  - target:
+      kind: Namespace
+      name: TENANT_NAMESPACE
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: ds-team-alpha
+      - op: replace
+        path: /metadata/annotations/openshift.io~1description
+        value: "Ray workload namespace for Data Science Team Alpha"
+
+  - target:
+      kind: ResourceQuota
+      name: ray-quota
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+      - op: replace
+        path: /spec/hard/requests.cpu
+        value: "4"
+      - op: replace
+        path: /spec/hard/requests.memory
+        value: 16Gi
+      - op: replace
+        path: /spec/hard/requests.nvidia.com~1gpu
+        value: "1"
+
+  - target:
+      kind: LimitRange
+      name: ray-limits
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+
+  - target:
+      kind: LocalQueue
+      name: default
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+
+  - target:
+      kind: Role
+      name: ray-tenant-user
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+
+  - target:
+      kind: RoleBinding
+      name: ray-tenant-binding
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+      - op: replace
+        path: /subjects/0/name
+        value: ds-team-alpha-users
+
+  - target:
+      kind: RoleBinding
+      name: ray-scc-binding
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+      - op: replace
+        path: /subjects/0/namespace
+        value: ds-team-alpha
+
+  - target:
+      kind: ServiceAccount
+      name: ray-service-account
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+
+  - target:
+      kind: RoleBinding
+      name: ray-sa-binding
+    patch: |
+      - op: replace
+        path: /metadata/namespace
+        value: ds-team-alpha
+      - op: replace
+        path: /subjects/0/namespace
+        value: ds-team-alpha
+      - op: replace
+        path: /subjects/1/namespace
+        value: ds-team-alpha

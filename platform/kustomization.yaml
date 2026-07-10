@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # dsc.yaml is REFERENCE ONLY -- apply via oc patch, not kustomize
+  - resourceflavor-cpu.yaml
+  - resourceflavor-gpu.yaml
+  - clusterqueue.yaml
