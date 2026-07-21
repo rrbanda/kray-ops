@@ -84,9 +84,6 @@ patches:
       - op: replace
         path: /subjects/0/namespace
         value: ds-team-alpha
-      - op: replace
-        path: /subjects/1/namespace
-        value: ds-team-alpha
 
   - target:
       kind: ServiceAccount

@@ -1,5 +1,18 @@
 # Tenant Onboarding Guide (Platform Admin)
 
+> **See also:** The RHOAI 2.25 product documentation covers Kueue setup (Chapter 8), distributed workload configuration (Chapter 9), and project access management (Chapter 5). This guide supplements those docs with automation for quota governance and custom RBAC.
+
+## Choosing an Onboarding Path
+
+There are two approaches to tenant provisioning:
+
+| Approach | How | Best For |
+|----------|-----|----------|
+| **This repo (oc apply -k)** | Full provisioning via Kustomize overlays. Creates namespace, labels, LocalQueue, RBAC, quotas, SCC. | Teams needing strict quota governance, custom RBAC, and repeatable GitOps automation. |
+| **Dashboard + this repo** | Create project via RHOAI Dashboard (handles namespace, labels, LocalQueue, permissions), then apply only quotas/SCC from this repo. | Teams already using Dashboard for project management who need quota caps added. |
+
+> **Do not mix both paths for the same namespace** without verifying that LocalQueue names and RBAC bindings are compatible. The Dashboard creates its own default LocalQueue and uses Admin/Contributor roles that differ from `ray-tenant-user`.
+
 ## Prerequisites
 
 Before onboarding tenants, ensure:
@@ -51,6 +64,8 @@ In the kustomization overlay, modify the ResourceQuota patch:
       value: "4"
 ```
 
+> **Important:** If you raise `limits.cpu` or `limits.memory` above the base defaults (8 CPU / 32Gi), also patch the LimitRange max to match, or individual containers will be rejected despite the higher namespace quota. See the `tenant-b` overlay for an example.
+
 ### Step 3: Set RBAC Group
 
 Update the RoleBinding patch to bind to the correct OpenShift group:
@@ -88,10 +103,26 @@ Run the validation script:
 ./scripts/validate-tenant.sh ds-team-gamma system:serviceaccount:ds-team-gamma:ray-service-account
 ```
 
-All 11 tests should pass:
+All 14 tests should pass:
 - 6 RBAC tests (create/list in own namespace, denied elsewhere)
 - 2 Kueue tests (LocalQueue exists, Workload read access)
-- 3 Infrastructure tests (ResourceQuota, LimitRange, ServiceAccount)
+- 6 Infrastructure tests (ResourceQuota, LimitRange, ServiceAccount, SCC/group/SA RoleBindings)
+
+### Step 6: Configure Image-Pull Access (if needed)
+
+This repo does not manage image-pull secrets. If your Ray container images are in a private registry, create an image-pull secret in the tenant namespace and link it to `ray-service-account`:
+
+```bash
+oc create secret docker-registry ray-pull-secret \
+  --docker-server=<registry> \
+  --docker-username=<user> \
+  --docker-password=<token> \
+  -n <tenant-namespace>
+
+oc secrets link ray-service-account ray-pull-secret --for=pull -n <tenant-namespace>
+```
+
+For the default RHOAI image (`quay.io/modh/ray:2.35.0-py311-cu121`), no pull secret is needed -- it is publicly accessible.
 
 ## Adjusting ClusterQueue Capacity
 

@@ -137,7 +137,7 @@ graph TD
     subgraph bindings["Per-Tenant RoleBindings"]
         B1["ray-tenant-binding<br/><i>Group → tenant group</i>"]
         B2["ray-sa-binding<br/><i>SA: ray-service-account</i><br/><i>SA: default</i>"]
-        B3["ray-scc-binding<br/><i>ClusterRole: system:openshift:scc:nonroot-v2</i><br/><i>SA: default + ray-service-account</i>"]
+        B3["ray-scc-binding<br/><i>ClusterRole: system:openshift:scc:nonroot-v2</i><br/><i>SA: ray-service-account</i>"]
     end
 
     B1 -->|roleRef| roleDefinition
@@ -242,18 +242,18 @@ graph TD
         A_ROLE["Role: ray-tenant-user"]
         A_RB["RoleBinding: ray-tenant-binding<br/>→ Group: ds-team-alpha-users"]
         A_SA["ServiceAccount: ray-service-account<br/>+ RoleBinding: ray-sa-binding"]
-        A_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: default + ray-service-account"]
+        A_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: ray-service-account"]
     end
 
     subgraph beta["ds-team-beta"]
         B_NS["Namespace<br/>labels: opendatahub.io/dashboard=true<br/>kueue.openshift.io/managed=true"]
         B_RQ["ResourceQuota: ray-quota<br/>requests.cpu: 8, memory: 32Gi<br/>nvidia.com/gpu: 2, pods: 20"]
-        B_LR["LimitRange: ray-limits<br/>default: 2 CPU, 4Gi<br/>max: 8 CPU, 32Gi, 1 GPU"]
+        B_LR["LimitRange: ray-limits<br/>default: 2 CPU, 4Gi<br/>max: 16 CPU, 64Gi"]
         B_LQ["LocalQueue: default → gpu-pool"]
         B_ROLE["Role: ray-tenant-user"]
         B_RB["RoleBinding: ray-tenant-binding<br/>→ Group: ds-team-beta-users"]
         B_SA["ServiceAccount: ray-service-account<br/>+ RoleBinding: ray-sa-binding"]
-        B_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: default + ray-service-account"]
+        B_SCC["RoleBinding: ray-scc-binding<br/>→ ClusterRole: system:openshift:scc:nonroot-v2<br/>→ SA: ray-service-account"]
     end
 
     alpha -.->|"DENIED: Alpha SA cannot<br/>create in Beta namespace"| beta
@@ -262,6 +262,32 @@ graph TD
     style alpha fill:#e6ffe6,stroke:#2e8b57
     style beta fill:#ffe6e6,stroke:#cc3333
 ```
+
+## RHOAI Dashboard Overlap
+
+When a project is created via the RHOAI Dashboard, the platform automatically provisions several resources that this repo also creates:
+
+| Resource | Dashboard Creates | This Repo Creates | Notes |
+|----------|-------------------|-------------------|-------|
+| Namespace label `kueue.openshift.io/managed=true` | Yes | Yes (`namespace.yaml`) | Idempotent -- no conflict |
+| Namespace label `opendatahub.io/dashboard=true` | Yes | Yes (`namespace.yaml`) | Idempotent -- no conflict |
+| Default LocalQueue | Yes | Yes (`local-queue.yaml`) | May conflict if Dashboard points to a different ClusterQueue |
+| User/group permissions | Yes (Permissions tab: Admin/Contributor) | Yes (`ray-tenant-user` Role + RoleBinding) | Different RBAC model -- custom Role is more granular |
+| ResourceQuota | No | Yes (`resource-quota.yaml`) | Unique to this repo |
+| LimitRange | No | Yes (`limit-range.yaml`) | Unique to this repo |
+| SCC binding | No | Yes (`scc-binding.yaml`) | Unique to this repo |
+
+**Recommended approach:** Either use this repo for full tenant provisioning (bypassing Dashboard project creation) **or** create projects via Dashboard first, then apply only the supplemental resources (quotas, LimitRange, custom Role, SCC binding) from this repo. Do not mix both paths for the same namespace without verifying LocalQueue and RBAC compatibility.
+
+For the official documented path, see the [RHOAI 2.25 product documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) -- particularly Chapter 5 (Managing access to data science projects) and Chapter 8 (Managing workloads with Kueue).
+
+## SCC Binding Rationale
+
+The `ray-scc-binding` grants `nonroot-v2` SCC to `ray-service-account` only (not the `default` SA). This is the minimum privilege needed for Ray pods.
+
+The CodeFlare Operator also injects `create-cert` init containers and `oauth-proxy` sidecars at runtime. Both run as non-root and are compatible with `nonroot-v2`. The static SCC binding ensures the SA has the required SCC before CodeFlare injection occurs.
+
+If Ray pods schedule correctly without this binding on your cluster (because CodeFlare handles SCC via its own mechanisms), you can safely remove it.
 
 ## DSC Configuration (API v1)
 
@@ -355,14 +381,14 @@ kray-ops/
 │   ├── role-ray-user.yaml       # 6 rule groups
 │   ├── rolebinding.yaml         # Group binding
 │   ├── sa-rolebinding.yaml      # SA binding (ray-service-account + default)
-│   ├── scc-binding.yaml         # nonroot-v2 for default SA
+│   ├── scc-binding.yaml         # nonroot-v2 for ray-service-account
 │   └── sa-ray.yaml
 ├── tenant-overlays/
 │   ├── tenant-a/                # ds-team-alpha: 4 CPU, 16Gi, 1 GPU
 │   └── tenant-b/                # ds-team-beta:  8 CPU, 32Gi, 2 GPU
 ├── scripts/
 │   ├── onboard-tenant.sh        # Automated provisioning with pre-flight checks
-│   └── validate-tenant.sh       # 11 isolation tests (RBAC, Kueue, infra)
+│   └── validate-tenant.sh       # 14 isolation tests (RBAC, Kueue, infra)
 └── docs/
     ├── architecture.md
     ├── onboarding-guide.md

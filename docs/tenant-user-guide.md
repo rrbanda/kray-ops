@@ -1,5 +1,7 @@
 # Tenant User Guide -- KubeRay on RHOAI 2.25
 
+> **Official documentation:** For the full product-supported workflow, see [Chapter 3 -- Running Ray-based distributed workloads](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) in the RHOAI 2.25 docs. This guide provides supplemental examples specific to the kray-ops tenant model.
+
 ## Getting Started
 
 Your platform admin has provisioned a namespace for your team with:

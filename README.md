@@ -2,13 +2,19 @@
 
 Kustomize-based multi-tenant onboarding model for KubeRay workloads on Red Hat OpenShift AI 2.25.
 
+> **Note:** This repo is a supplemental accelerator, not a replacement for the [RHOAI 2.25 product documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/). For the official documented path, see [RHOAI Product Documentation](#rhoai-product-documentation) below.
+
 ## What This Provides
 
-- **Namespace isolation** -- Each tenant gets a dedicated namespace with RBAC boundaries
-- **Quota management** -- Per-tenant ResourceQuotas for CPU, memory, and GPU
-- **Kueue integration** -- Fair scheduling via LocalQueue → ClusterQueue routing
-- **Security** -- SCC bindings for Ray pods, mTLS between nodes, OAuth-protected dashboard
-- **Self-service** -- Tenants create RayClusters/RayJobs without admin intervention
+This repo supplements RHOAI product docs with automation and governance that the platform does not provide out of the box:
+
+- **Kustomize-based tenant provisioning** -- Repeatable base/overlay pattern for onboarding N tenants
+- **Per-tenant ResourceQuotas + LimitRanges** -- GPU/CPU/memory caps not created by the RHOAI Dashboard
+- **Custom RBAC Role** -- `ray-tenant-user` with Ray-specific permissions (more granular than Dashboard Admin/Contributor)
+- **Automated onboarding + validation scripts** -- Pre-flight checks, apply, and 14-check isolation test suite
+- **SCC binding** -- Grants `nonroot-v2` to `ray-service-account` for Ray pod security
+
+> **Dashboard overlap:** The RHOAI Dashboard already handles namespace creation with `kueue.openshift.io/managed=true` labels, creates a default LocalQueue, and provides a Permissions tab for user/group assignment. This repo bypasses the Dashboard path with `oc apply -k`. Choose one approach -- see [docs/onboarding-guide.md](docs/onboarding-guide.md) for guidance.
 
 ## Quick Start
 
@@ -85,7 +91,7 @@ kray-ops/
 │   └── tenant-b/                # ds-team-beta  (8 CPU, 2 GPU)
 ├── scripts/
 │   ├── onboard-tenant.sh        # Automated tenant provisioning
-│   └── validate-tenant.sh       # RBAC + Kueue isolation tests
+│   └── validate-tenant.sh       # 14 isolation tests (RBAC, Kueue, infra)
 └── docs/
     ├── architecture.md          # Architecture diagrams and component roles
     ├── onboarding-guide.md      # Step-by-step for platform admins
@@ -101,13 +107,14 @@ kray-ops/
 | Workbench / notebooks | Yes -- own ns only | RHOAI Dashboard project role | Tenant self-serve | Interactive dev + CodeFlare SDK |
 | resourcequotas, limitranges | No | -- | GPUaaS / OPS | Wouldn't let tenants lift their own GPU/CPU caps |
 | clusterroles, roles, rolebindings | No | -- | GPUaaS / OPS | Privilege escalation risk |
-| SecurityContextConstraints (SCC) | No (bound for them by us) | Cluster-scoped binding | OPS / GPUaaS | Cluster-scoped; Ray pods need it but tenants can't self-grant |
+| SecurityContextConstraints (SCC) | No (bound for them by us) | Namespaced RoleBinding for `ray-service-account` | OPS / GPUaaS | Ray pods need nonroot-v2 SCC; tenants can't self-grant |
 | CRDs, operator config (DSC/DSCI), KubeRay operator | No | -- | OPS / GPUaaS | Platform layer -- single owner |
 
 ### What We Own vs. What Tenants Get
 
-- **We provision per tenant:** a dedicated namespace, ResourceQuota + LimitRange (GPU/CPU caps), the namespaced Role + RoleBinding, SCC binding for the Ray service accounts, and image-pull access.
-- **Tenants self-serve within their namespace:** create/manage their own RayClusters, RayJobs, RayServices, and workbenches -- but cannot alter quotas, RBAC, SCC, or reach other tenants' namespaces.
+- **We provision per tenant:** a dedicated namespace, ResourceQuota + LimitRange (GPU/CPU caps), the namespaced Role + RoleBinding, SCC binding for `ray-service-account`, and image-pull access (image-pull secrets are not managed by this repo -- configure separately per your registry setup).
+- **Tenants self-serve within their namespace:** create/manage their own RayClusters, RayJobs, RayServices (not yet product-supported), and workbenches -- but cannot alter quotas, RBAC, SCC, or reach other tenants' namespaces.
+- **The RHOAI Dashboard also handles:** namespace labeling, default LocalQueue creation, and user/group permissions via its Permissions tab. If using Dashboard-created projects, this repo adds quotas, custom RBAC, and SCC on top.
 
 ### RBAC Role Detail
 
@@ -121,6 +128,20 @@ Each tenant gets a `ray-tenant-user` Role with:
 | `kubeflow.org` | notebooks | Full CRUD |
 | `kueue.x-k8s.io` | workloads, localqueues | Read-only |
 | `""` (core) | persistentvolumeclaims | Full CRUD |
+
+## RHOAI Product Documentation
+
+Most of what this repo automates is covered by the official RHOAI 2.25 documentation. Consult these chapters first:
+
+| Topic | RHOAI Doc Chapter |
+|-------|-------------------|
+| Kueue setup (ClusterQueue, LocalQueue, ResourceFlavors, namespace labeling) | [Chapter 8 -- Managing workloads with Kueue](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) |
+| Configuring quotas for distributed workloads, CodeFlare Operator config | [Chapter 9 -- Managing distributed workloads](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) |
+| Running Ray workloads from notebooks/pipelines | [Chapter 3 -- Running Ray-based distributed workloads](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) |
+| User/group permissions on projects (Dashboard Permissions tab) | [Chapter 5 -- Managing access to data science projects](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) |
+| Managing users and admin groups | [Chapter 1 -- Managing users and groups](https://docs.redhat.com/en/documentation/red_hat_openshift_ai/) |
+
+**What this repo adds beyond the docs:** per-tenant ResourceQuotas/LimitRanges, a custom `ray-tenant-user` RBAC Role, SCC bindings for Ray service accounts, Kustomize-based onboarding automation, and a 14-check validation script.
 
 ## Adding a New Tenant
 

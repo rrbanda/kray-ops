@@ -46,6 +46,12 @@ patches:
       - op: replace
         path: /metadata/namespace
         value: ds-team-beta
+      - op: replace
+        path: /spec/limits/0/max/cpu
+        value: "16"
+      - op: replace
+        path: /spec/limits/0/max/memory
+        value: 64Gi
 
   - target:
       kind: LocalQueue
@@ -83,9 +89,6 @@ patches:
         value: ds-team-beta
       - op: replace
         path: /subjects/0/namespace
-        value: ds-team-beta
-      - op: replace
-        path: /subjects/1/namespace
         value: ds-team-beta
 
   - target:

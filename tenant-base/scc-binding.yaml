@@ -9,8 +9,5 @@ roleRef:
   name: system:openshift:scc:nonroot-v2
 subjects:
   - kind: ServiceAccount
-    name: default
-    namespace: TENANT_NAMESPACE
-  - kind: ServiceAccount
     name: ray-service-account
     namespace: TENANT_NAMESPACE
